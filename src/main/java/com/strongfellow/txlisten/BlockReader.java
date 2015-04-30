@@ -11,7 +11,6 @@ import org.slf4j.LoggerFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.strongfellow.utils.BlockParser;
-import com.strongfellow.utils.Main;
 import com.strongfellow.utils.ParseException;
 import com.strongfellow.utils.Utils;
 import com.strongfellow.utils.data.Block;
@@ -61,7 +60,7 @@ public class BlockReader {
 			Block block = parser.parse(bytes);
 			String network = block.getMagicNumber();
 			String key = String.format("networks/%s/blocks/%s/payload", network, block.getBlockHash());
-			stasher.upload(bucketName, key, bytes);
+			stasher.upload(bucketName, key, bytes, 0, 8 + (int)block.getBlockLength());
 			logger.info("put block no {}", ++blockCount);
 
 			int offset = 88;

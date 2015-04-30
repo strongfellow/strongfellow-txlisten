@@ -38,11 +38,12 @@ public class TransactionStasher {
         logger.info("finished stashing block {}", block.getHashAsString());
     }
     
-    public void upload(String bucketName, String key, byte[] bytes) throws IOException {
+    private void upload(String bucketName, String key, byte[] bytes) throws IOException {
     	upload(bucketName, key, bytes, 0, bytes.length);
     }
     
     void upload(String bucketName, String key, byte[] payload, int offset, int length) throws IOException {
+    	logger.info("begin caching s3://{}/{}", bucketName, key);
     	boolean cacheHit = false;
     	try {
     		ObjectMetadata meta = this.s3.getObjectMetadata(bucketName, key);
@@ -60,12 +61,13 @@ public class TransactionStasher {
     	}
     	
     	if (cacheHit) {
-        	logger.info("cache hit, skipping block");
+        	logger.info("cache hit, skipping.");
         } else {
-        	logger.info("cache miss, uploading block");
+        	logger.info("cache miss, uploading...");
         	InputStream input = new ByteArrayInputStream(payload, offset, length);
         	this.s3.putObject(bucketName, key, input, null);
         	input.close();
         }
+    	logger.info("finished caching s3://{}/{}", bucketName, key);
     }
 }
