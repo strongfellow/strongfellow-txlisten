@@ -10,6 +10,7 @@ import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.strongfellow.utils.AmazonUtils.CacheException;
 import com.strongfellow.utils.BlockParser;
 import com.strongfellow.utils.ParseException;
 import com.strongfellow.utils.Utils;
@@ -20,12 +21,11 @@ public class BlockReader {
 		
 	private static final Logger logger = LoggerFactory.getLogger(BlockReader.class);
 	
-	public static void main(String[] args) throws IOException, ParseException, NoSuchAlgorithmException, InterruptedException {
+	public static void main(String[] args) throws IOException, ParseException, NoSuchAlgorithmException, InterruptedException, CacheException {
 
 		int txCount = 0;
 		int blockCount = 0;
-		
-		final TransactionStasher stasher = new TransactionStasher();
+		final BlockStasher stasher = new BlockStasher();
 		InputStream in = new BufferedInputStream(System.in);
 		byte[] bytes = new byte[16 * 1024];
 		
@@ -35,7 +35,7 @@ public class BlockReader {
 		while (true) {
 			int y = in.read(bytes, 0, 8);
 			if (y == -1) {
-				System.exit(0);
+				break;
 			}
 			long n = Utils.uint32(bytes,  4);
 			while (8 + n >= bytes.length) {
@@ -60,7 +60,7 @@ public class BlockReader {
 			Block block = parser.parse(bytes);
 			String network = block.getMagicNumber();
 			String key = String.format("networks/%s/blocks/%s/payload", network, block.getBlockHash());
-			stasher.upload(bucketName, key, bytes, 0, 8 + (int)block.getBlockLength());
+			stasher.cache(key, bytes, 0, 8 + (int)block.getBlockLength());
 			logger.info("put block no {}", ++blockCount);
 
 			int offset = 88;
@@ -87,11 +87,15 @@ public class BlockReader {
 				} else {
 					logger.info("hash is good: {}", hash);
 				}
-				stasher.upload(bucketName, k, bytes, offset, len);
+				stasher.cache(k, bytes, offset, len);
 				offset += len;
 				logger.info("put transaction no {}", ++txCount);
 			}
 		}
+		logger.info("final count transactions {}", txCount);
+		logger.info("final count blocks {}", blockCount);
+		logger.info("SUCCESS - finished writing transactions and blocks");
+		System.exit(0);
 	}
 
 }

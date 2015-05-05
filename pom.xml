@@ -44,6 +44,11 @@
       <artifactId>h2</artifactId>
       <version>1.4.187</version>
     </dependency>
+    <dependency>
+	  <groupId>com.beust</groupId>
+	  <artifactId>jcommander</artifactId>
+	  <version>1.35</version>
+	</dependency>
   </dependencies>
   <build>
     <plugins>

@@ -3,15 +3,16 @@ package com.strongfellow.txlisten;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 
 import org.bitcoinj.core.Block;
 import org.bitcoinj.core.BlockChain;
-import org.bitcoinj.core.BlockChainListener;
-import org.bitcoinj.core.FullPrunedBlockChain;
 import org.bitcoinj.core.GetDataMessage;
 import org.bitcoinj.core.Message;
 import org.bitcoinj.core.NetworkParameters;
@@ -19,32 +20,28 @@ import org.bitcoinj.core.Peer;
 import org.bitcoinj.core.PeerAddress;
 import org.bitcoinj.core.PeerEventListener;
 import org.bitcoinj.core.PeerGroup;
-import org.bitcoinj.core.ScriptException;
-import org.bitcoinj.core.Sha256Hash;
-import org.bitcoinj.core.StoredBlock;
 import org.bitcoinj.core.Transaction;
-import org.bitcoinj.core.VerificationException;
-import org.bitcoinj.core.AbstractBlockChain.NewBlockType;
 import org.bitcoinj.params.MainNetParams;
-import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.store.FullPrunedBlockStore;
 import org.bitcoinj.store.H2FullPrunedBlockStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.strongfellow.utils.Utils;
+import com.strongfellow.utils.AmazonUtils.CacheException;
+import com.strongfellow.utils.BlockParser;
+import com.strongfellow.utils.ParseException;
 
 public class TransactionListener {
-
+	
     private static final Logger logger = LoggerFactory.getLogger(TransactionListener.class);
 
     protected static TransactionQueue transactionQueue = new TransactionQueue();
-    private static final TransactionStasher stasher = new TransactionStasher();
+    private static final BlockStasher stasher = new BlockStasher();
 
     public static void main(String[] args) throws UnknownHostException, InterruptedException, ExecutionException, BlockStoreException {
 
+    	Executor executor = Executors.newFixedThreadPool(4);
         final Map<String, Long> counters = new HashMap<String, Long>();
         counters.put("sqs::PUT", 0L);
 
@@ -58,6 +55,8 @@ public class TransactionListener {
         peerGroup.addEventListener(new PeerEventListener() {
 
             public void onTransaction(Peer peer, Transaction t) {
+            	logger.info("not doing anything with {}", t.getHashAsString());
+            	/**
             	logger.info("begin processing transaction {}", t.getHashAsString());
                 try {
                     stasher.stash(t);
@@ -68,6 +67,7 @@ public class TransactionListener {
                 } catch (IOException e) {
                     logger.error("couldn't fully process transaction", e);
 				}
+				*/
             }
 
             public Message onPreMessageReceived(Peer peer, Message m) {
@@ -88,8 +88,9 @@ public class TransactionListener {
 
             public void onBlocksDownloaded(Peer peer, Block block, int blocksLeft) {
             	try {
-					stasher.stash(block);
-				} catch (IOException e) {
+            		final BlockParser blockParser = new BlockParser();
+            		stasher.stash(Constants.MAIN_NETWORK, block);
+				} catch (ParseException|CacheException e) {
 					logger.error("couldn't stash block", e);
 				}
             }
@@ -97,7 +98,7 @@ public class TransactionListener {
             public List<Message> getData(Peer peer, GetDataMessage m) {
                 return null;
             }
-        });
+        }, executor);
 
         peerGroup.start();
         peerGroup.addAddress(new PeerAddress(InetAddress.getLocalHost(), params.getPort()));
