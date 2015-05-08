@@ -8,10 +8,14 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import org.bitcoinj.core.Block;
+import org.bitcoinj.core.GetDataMessage;
+import org.bitcoinj.core.Message;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Peer;
+import org.bitcoinj.core.PeerEventListener;
 import org.bitcoinj.core.PeerGroup;
 import org.bitcoinj.core.Sha256Hash;
+import org.bitcoinj.core.Transaction;
 import org.bitcoinj.params.MainNetParams;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,8 +46,9 @@ public class BlockChainTopDownCrawler {
         PeerGroup peerGroup = new PeerGroup(params);
         peerGroup.setUseLocalhostPeerWhenPossible(true);
         peerGroup.startAndWait();
-		Peer peer = peerGroup.connectToLocalHost();
 
+        Thread.sleep(7000);
+		Peer peer = peerGroup.connectToLocalHost();
 		
 		BlockStasher blockStasher = new BlockStasher();
 		Args args = new Args();
